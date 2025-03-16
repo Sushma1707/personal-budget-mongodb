@@ -1,5 +1,5 @@
 const mongoose = require('mongoose')
-const budgetModel = require('./models/budget_schema')
+const budgetModel = require('./models/Budget')
 
 
 let url = 'mongodb://127.0.0.1:27017/personal-budget';
