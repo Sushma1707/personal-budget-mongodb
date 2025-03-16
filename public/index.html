@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="Personal Budget Webpage Designed as part of assignment" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Personal Budget</title>
+    <link rel="stylesheet" href="reset.css" />
+    <link rel="stylesheet" href="main.css" />
+  </head>
+  <body>
+    <nav class="menu">
+      <ul>
+        <li><a href="/">Homepage</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="login.html">Login</a></li>
+        <li><a href="https://google.com">Google</a></li>
+      </ul>
+      <a href="https://google.com">
+        <img src="user.webp" alt="Profile Picture" class="image" />
+      </a>
+    </nav>
+
+    <header class="hero">
+      <h1>Personal Budget</h1>
+      <h2>A personal-budget management app</h2>
+    </header>
+
+    <main class="container center" id="main">
+      <div class="page-area">
+        <article>
+          <h1>Stay on track</h1>
+          <p>Do you know where you are spending your money? If you really stop to track it down, you would get surprised! Proper budget management depends on real data... and this app will help you with that!</p>
+        </article>
+        <article>
+          <h1>Alerts</h1>
+          <p>
+            What if your clothing budget ended? You will get an alert. The goal
+            is to never go over the budget.
+          </p>
+        </article>
+
+        <article>
+          <h1>Results</h1>
+          <p>
+            People who stick to a financial plan, budgeting every expense, get
+            out of debt faster! Also, they to live happier lives... since they
+            expend without guilt or fear... because they know it is all good and
+            accounted for.
+          </p>
+        </article>
+        
+        <article>
+          <h1>Chart</h1>
+          <canvas id="myChart" width="400" height="400"></canvas>
+        </article>
+        
+        <div id="charts">
+          <div id="donut-chart"></div>
+          <div id="d3-chart"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="bottom">
+      <div class="center">
+        <p>Changed by Sushma Sri Bujula</p>
+      </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.5.0/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
+    <script>
+      
+    function drawD3Chart(budgetData) {
+    d3.select("#d3-chart").selectAll("*").remove();
+    
+    const width = 600, height = 450, margin = 40;
+    const radius = Math.min(width, height) / 2 - margin;
+
+    const svg = d3.select("#d3-chart")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height)
+      .append("g")
+      .attr("transform", `translate(${width / 2}, ${height / 2})`);
+
+    const color = d3.scaleOrdinal()
+      .domain(budgetData.map(d => d.title))
+      .range(["#FFCD56", "#FF6384", "#36A2EB", "#FD6B19", "#4CAF50", "#F44336", "#000000", "#8E44AD"]);
+
+    const pie = d3.pie().sort(null).value(d => d.budget);
+    const data_ready = pie(budgetData);
+
+    const arc = d3.arc().innerRadius(100).outerRadius(radius);
+    const outerArc = d3.arc().innerRadius(radius * 1.1).outerRadius(radius * 1.1);
+
+    svg.selectAll("slices")
+      .data(data_ready)
+      .enter()
+      .append("path")
+      .attr("d", arc)
+      .attr("fill", d => color(d.data.title))
+      .style("opacity", 0.8);
+
+    // Add label lines
+    svg.selectAll("lines")
+      .data(data_ready)
+      .enter()
+      .append("polyline")
+      .attr("stroke", "black")
+      .attr("fill", "none")
+      .attr("stroke-width", 1)
+      .attr("points", d => {
+          const posA = arc.centroid(d); // Center of slice
+          const posB = outerArc.centroid(d); // Outside arc
+          const posC = [posB[0] > 0 ? posB[0] + 10 : posB[0] - 10, posB[1]]; // Adjust for left/right alignment
+          return [posA, posB, posC].join(" ");
+      });
+
+    // Add labels
+    svg.selectAll("labels")
+      .data(data_ready)
+      .enter()
+      .append("text")
+      .text(d => d.data.title)
+      .attr("transform", d => {
+          const pos = outerArc.centroid(d);
+          return `translate(${pos[0] > 0 ? pos[0] + 15 : pos[0] - 15}, ${pos[1]})`; 
+      })
+      .style("text-anchor", d => (outerArc.centroid(d)[0] > 0 ? "start" : "end"))
+      .style("font-size", "12px")
+      .style("font-weight", "bold");
+}
+
+
+      function createChart(dataSource) {
+        var ctx = document.getElementById("myChart").getContext("2d");
+        new Chart(ctx, { type: "pie", data: dataSource });
+      }
+
+      function getBudget() {
+        axios.get("http://localhost:3000/budget").then(function (res) {
+          let budgetData = res.data.myBudget;
+          let newDataSource = { datasets: [{ data: [], backgroundColor: [] }], labels: [] };
+          
+          budgetData.forEach((item, index) => {
+            newDataSource.datasets[0].data.push(item.budget);
+            newDataSource.labels.push(item.title);
+            newDataSource.datasets[0].backgroundColor.push(["#FFCD56", "#FF6384", "#36A2EB", "#FD6B19", "#4CAF50", "#F44336", "#000000", "#8E44AD"][index % 8]);
+          });
+
+          createChart(newDataSource);
+          drawD3Chart(budgetData);
+        }).catch(error => console.error("Error fetching budget data:", error));
+      }
+
+      getBudget();
+    </script>
+  </body>
+</html>
